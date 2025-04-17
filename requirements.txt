@@ -3,13 +3,12 @@ langchain
 langchain-core
 langchain-community
 openai
-huggingface_hub
 tiktoken
 sentence-transformers
 faiss-cpu
 selenium
 chromium-browser
 webdriver-manager
-bs4
+beautifulsoup4
 unstructured
 python-dotenv
