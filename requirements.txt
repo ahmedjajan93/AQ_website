@@ -4,3 +4,4 @@ faiss-cpu>=1.7.4
 streamlit>=1.29.0
 python-dotenv>=1.0.0
 sentence-transformers>=2.2.2
+bs4
