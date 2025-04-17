@@ -14,7 +14,6 @@ from dotenv import load_dotenv
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
 
 # Load environment variables
 load_dotenv()
@@ -33,8 +32,9 @@ def get_custom_loader(url):
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.binary_location = "/usr/bin/chromium-browser"
 
-    service = Service(ChromeDriverManager().install())
+    service = Service("/usr/lib/chromium-browser/chromedriver")
     driver = webdriver.Chrome(service=service, options=chrome_options)
     loader = SeleniumURLLoader(urls=[url])
     loader.driver = driver
@@ -63,8 +63,8 @@ if st.button("Submit", type='primary'):
     else:
         with st.spinner("Processing..."):
 
-            # Load or build vectorstore
             embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+
             if os.path.exists(VECTORSTORE_PATH):
                 vectorstore = FAISS.load_local(
                     VECTORSTORE_PATH,
@@ -140,7 +140,7 @@ Website: ...
             st.subheader("🤖 Refined Contact Info (LLM)")
             st.markdown(refined_contacts)
 
-            # User question
+            # User QA
             question_prompt = PromptTemplate(
                 input_variables=["context", "question"],
                 template="""
