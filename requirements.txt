@@ -1,11 +1,7 @@
-streamlit
+seleniumbase
 langchain
 langchain-community
-chromadb
-selenium
-torch
-openai
-faiss-cpu
-tqdm
 huggingface-hub
+streamlit
 python-dotenv
+faiss-cpu
