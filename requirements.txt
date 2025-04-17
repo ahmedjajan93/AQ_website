@@ -1,0 +1,15 @@
+langchain-core
+langchain
+langchain-community
+streamlit 
+python-env
+torch 
+bs4
+openai
+tiktoken
+sentence-transformers
+faiss-cpu
+requests 
+urllib3
+selenium
+unstructured
