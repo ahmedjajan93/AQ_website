@@ -14,3 +14,4 @@ urllib3
 selenium
 unstructured
 chromium-browser
+webdriver-manager
