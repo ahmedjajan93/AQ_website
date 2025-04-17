@@ -1,7 +1,8 @@
-seleniumbase
+playwright
 langchain
 langchain-community
-huggingface-hub
+sentence-transformers
 streamlit
 python-dotenv
 faiss-cpu
+langchain-openai
