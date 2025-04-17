@@ -44,20 +44,6 @@ if st.button("Submit", type='primary'):
 
                 retriever = vectorstore.as_retriever()
 
-                # Regex contact info
-                full_text = "\n".join([doc.page_content for doc in docs])
-                regex_contacts = extract_contact_info(full_text)
-
-                st.subheader("📇 Regex Contact Info")
-                for key, values in regex_contacts.items():
-                    if values:
-                        st.markdown(f"**{key.capitalize()}:**")
-                        for v in values:
-                            st.markdown(f"- {v}")
-                    else:
-                        st.markdown(f"**{key.capitalize()}:** Not found")
-
-                # Handle user question
                 question_prompt = PromptTemplate(
                     input_variables=["context", "question"],
                     template="""
