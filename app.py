@@ -10,7 +10,7 @@ import os
 import re
 from dotenv import load_dotenv
 
-# Selenium setup
+# Selenium setup for Streamlit Cloud
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
@@ -36,6 +36,7 @@ def get_custom_loader(url):
 
     service = Service("/usr/lib/chromium-browser/chromedriver")
     driver = webdriver.Chrome(service=service, options=chrome_options)
+
     loader = SeleniumURLLoader(urls=[url])
     loader.driver = driver
     return loader
@@ -64,7 +65,6 @@ if st.button("Submit", type='primary'):
         with st.spinner("Processing..."):
 
             embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-
             if os.path.exists(VECTORSTORE_PATH):
                 vectorstore = FAISS.load_local(
                     VECTORSTORE_PATH,
@@ -86,7 +86,7 @@ if st.button("Submit", type='primary'):
 
             retriever = vectorstore.as_retriever()
 
-            # Regex contact info
+            # Regex extraction
             full_text = "\n".join([doc.page_content for doc in retriever.get_relevant_documents("contact")])
             regex_contacts = extract_contact_info(full_text)
 
