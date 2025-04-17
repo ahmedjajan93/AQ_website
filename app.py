@@ -11,13 +11,14 @@ import re
 from dotenv import load_dotenv
 import subprocess
 
-# Install Playwright dependencies
-def install_dependencies():
-    with st.spinner("Setting up environment..."):
+# Install Playwright browser only (skip install-deps)
+def install_browser():
+    try:
         subprocess.run(["playwright", "install", "chromium"], check=True)
-        subprocess.run(["playwright", "install-deps"], check=True)
+    except Exception as e:
+        st.warning("Browser setup failed. If running on Streamlit Cloud, this may be unsupported.")
 
-install_dependencies()
+install_browser()
 
 # Load environment variables
 load_dotenv()
@@ -25,7 +26,6 @@ os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
 
 VECTORSTORE_PATH = "my_vector_db"
 
-# Streamlit UI
 st.title("🔎 Website QA & Contact Info Extractor")
 
 url = st.text_input("Enter website URL:", placeholder="https://example.com")
@@ -38,7 +38,20 @@ def get_custom_loader(url):
         continue_on_failure=False
     )
 
-# ... [rest of your existing functions remain the same] ...
+def extract_contact_info(text: str):
+    emails = re.findall(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+", text)
+    phones = re.findall(r"(?:(?:\+?\d{1,3}[\s-]?)?\(?\d{2,4}\)?[\s-]?)?\d{3,4}[\s-]?\d{3,4}", text)
+    websites = re.findall(r"(https?://[^\s\"\'<>]+)", text)
+    addresses = re.findall(
+        r"\d{1,5}\s[\w\s]{1,30}(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Lane|Ln|Drive|Dr|Way|Square|Sq|Court|Ct|Parkway|Pkwy)[^\n,\.]*", 
+        text
+    )
+    return {
+        "emails": list(set(emails)),
+        "phones": list(set(phones)),
+        "websites": list(set(websites)),
+        "addresses": list(set(addresses))
+    }
 
 if st.button("Submit", type='primary'):
     if not url:
@@ -48,9 +61,8 @@ if st.button("Submit", type='primary'):
     else:
         with st.spinner("Processing..."):
             try:
-                # Load or build vectorstore
                 embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-                
+
                 if os.path.exists(VECTORSTORE_PATH):
                     vectorstore = FAISS.load_local(
                         VECTORSTORE_PATH,
@@ -69,7 +81,88 @@ if st.button("Submit", type='primary'):
                     vectorstore = FAISS.from_documents(chunks, embedding_model)
                     vectorstore.save_local(VECTORSTORE_PATH)
 
-                # ... [rest of your processing code] ...
+                retriever = vectorstore.as_retriever()
+
+                full_text = "\n".join([doc.page_content for doc in retriever.get_relevant_documents("contact")])
+                regex_contacts = extract_contact_info(full_text)
+
+                st.subheader("📇 Regex Contact Info")
+                for key, values in regex_contacts.items():
+                    if values:
+                        st.markdown(f"**{key.capitalize()}:**")
+                        for v in values:
+                            st.markdown(f"- {v}")
+                    else:
+                        st.markdown(f"**{key.capitalize()}:** Not found")
+
+                llm = ChatOpenAI(
+                    model="google/gemma-3-27b-it:free",
+                    openai_api_base="https://openrouter.ai/api/v1",
+                    temperature=0.7,
+                    max_tokens=1024
+                )
+
+                contact_prompt = PromptTemplate(
+                    input_variables=["context"],
+                    template="""
+Extract the following contact details from the text below, if available:
+- Official phone number
+- Email address
+- Physical address
+- Official website URL
+
+Context:
+{context}
+
+Return the output in this format:
+
+Phone: ...
+Email: ...
+Address: ...
+Website: ...
+"""
+                )
+
+                refiner_chain = RetrievalQA.from_chain_type(
+                    llm=llm,
+                    retriever=retriever,
+                    chain_type="stuff",
+                    chain_type_kwargs={"prompt": contact_prompt},
+                    return_source_documents=False
+                )
+
+                refined_contacts = refiner_chain.run("Extract contact information")
+                st.subheader("🤖 Refined Contact Info (LLM)")
+                st.markdown(refined_contacts)
+
+                question_prompt = PromptTemplate(
+                    input_variables=["context", "question"],
+                    template="""
+You are an expert technical assistant.
+
+Use the context below to answer the user's question in a detailed, helpful, and beginner-friendly way.
+
+Highlight any code examples using Markdown and explain each clearly.
+
+Context:
+{context}
+
+Question:
+{question}
+"""
+                )
+
+                qa_chain = RetrievalQA.from_chain_type(
+                    llm=llm,
+                    retriever=retriever,
+                    chain_type="stuff",
+                    chain_type_kwargs={"prompt": question_prompt},
+                    return_source_documents=False
+                )
+
+                result = qa_chain.run(query)
+                st.subheader("💬 Answer to Your Question")
+                st.markdown(result)
 
             except Exception as e:
                 st.error(f"An error occurred: {str(e)}")
