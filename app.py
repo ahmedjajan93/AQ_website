@@ -38,6 +38,7 @@ def get_custom_loader(url):
     # Pre-installed chromedriver location
     service = Service("/usr/lib/chromium-browser/chromedriver")
 
+    # Ensure the correct driver and binary location is being passed
     driver = webdriver.Chrome(service=service, options=chrome_options)
     loader = SeleniumURLLoader(urls=[url])
     loader.driver = driver
