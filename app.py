@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 # Selenium setup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.service import Service
 
 # Load environment variables
@@ -28,17 +29,17 @@ url = st.text_input("Enter website URL:", placeholder="https://example.com")
 query = st.text_area("Ask a question about the website:", height=200)
 
 def get_custom_loader(url):
-    # Use Streamlit Cloud's pre-installed chromium-browser and chromedriver
+    # Use webdriver-manager to download the latest chromedriver dynamically
     chrome_options = Options()
-    chrome_options.binary_location = "/usr/bin/chromium-browser"  # Path to chromium browser in Streamlit Cloud
-    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--headless")  # Run headless
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
 
-    # Pre-installed chromedriver location
-    service = Service("/usr/lib/chromium-browser/chromedriver")
+    # Use WebDriver Manager to automatically download the correct chromedriver
+    driver_path = ChromeDriverManager().install()
 
-    # Ensure the correct driver and binary location is being passed
+    # Service is initialized with the downloaded chromedriver
+    service = Service(driver_path)
     driver = webdriver.Chrome(service=service, options=chrome_options)
     loader = SeleniumURLLoader(urls=[url])
     loader.driver = driver
