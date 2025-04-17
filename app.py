@@ -10,7 +10,7 @@ import os
 import re
 from dotenv import load_dotenv
 
-# Selenium setup for Streamlit Cloud
+# Selenium setup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
@@ -28,20 +28,23 @@ url = st.text_input("Enter website URL:", placeholder="https://example.com")
 query = st.text_area("Ask a question about the website:", height=200)
 
 def get_custom_loader(url):
+    # Use Streamlit Cloud's pre-installed chromium-browser and chromedriver
     chrome_options = Options()
+    chrome_options.binary_location = "/usr/bin/chromium-browser"  # Path to chromium browser in Streamlit Cloud
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.binary_location = "/usr/bin/chromium-browser"
 
+    # Pre-installed chromedriver location
     service = Service("/usr/lib/chromium-browser/chromedriver")
-    driver = webdriver.Chrome(service=service, options=chrome_options)
 
+    driver = webdriver.Chrome(service=service, options=chrome_options)
     loader = SeleniumURLLoader(urls=[url])
     loader.driver = driver
     return loader
 
 def extract_contact_info(text: str):
+    # Extract contact information using regex
     emails = re.findall(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+", text)
     phones = re.findall(r"(?:(?:\+?\d{1,3}[\s-]?)?\(?\d{2,4}\)?[\s-]?)?\d{3,4}[\s-]?\d{3,4}", text)
     websites = re.findall(r"(https?://[^\s\"\'<>]+)", text)
@@ -64,6 +67,7 @@ if st.button("Submit", type='primary'):
     else:
         with st.spinner("Processing..."):
 
+            # Load or build vectorstore
             embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
             if os.path.exists(VECTORSTORE_PATH):
                 vectorstore = FAISS.load_local(
@@ -86,7 +90,7 @@ if st.button("Submit", type='primary'):
 
             retriever = vectorstore.as_retriever()
 
-            # Regex extraction
+            # Regex contact info
             full_text = "\n".join([doc.page_content for doc in retriever.get_relevant_documents("contact")])
             regex_contacts = extract_contact_info(full_text)
 
@@ -109,23 +113,22 @@ if st.button("Submit", type='primary'):
 
             contact_prompt = PromptTemplate(
                 input_variables=["context"],
-                template="""
-Extract the following contact details from the text below, if available:
-- Official phone number
-- Email address
-- Physical address
-- Official website URL
+                template="""Extract the following contact details from the text below, if available:
+                - Official phone number
+                - Email address
+                - Physical address
+                - Official website URL
 
-Context:
-{context}
+                Context:
+                {context}
 
-Return the output in this format:
+                Return the output in this format:
 
-Phone: ...
-Email: ...
-Address: ...
-Website: ...
-"""
+                Phone: ...
+                Email: ...
+                Address: ...
+                Website: ...
+                """
             )
 
             refiner_chain = RetrievalQA.from_chain_type(
@@ -140,22 +143,19 @@ Website: ...
             st.subheader("🤖 Refined Contact Info (LLM)")
             st.markdown(refined_contacts)
 
-            # User QA
+            # User question
             question_prompt = PromptTemplate(
                 input_variables=["context", "question"],
-                template="""
-You are an expert technical assistant.
+                template="""You are an expert technical assistant.
 
-Use the context below to answer the user's question in a detailed, helpful, and beginner-friendly way.
+                Use the context below to answer the user's question in a detailed, helpful, and beginner-friendly way.
 
-Highlight any code examples using Markdown and explain each clearly.
+                Context:
+                {context}
 
-Context:
-{context}
-
-Question:
-{question}
-"""
+                Question:
+                {question}
+                """
             )
 
             qa_chain = RetrievalQA.from_chain_type(
