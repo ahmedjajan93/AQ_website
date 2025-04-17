@@ -7,7 +7,6 @@ tiktoken
 sentence-transformers
 faiss-cpu
 selenium
-webdriver-manager
 beautifulsoup4
 unstructured
 python-dotenv
