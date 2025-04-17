@@ -10,11 +10,8 @@ import os
 import re
 from dotenv import load_dotenv
 
-# Selenium setup
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from webdriver_manager.chrome import ChromeDriverManager
-from selenium.webdriver.chrome.service import Service
+# Replace Selenium with SeleniumBase
+from seleniumbase import Driver
 
 # Load environment variables
 load_dotenv()
@@ -29,18 +26,8 @@ url = st.text_input("Enter website URL:", placeholder="https://example.com")
 query = st.text_area("Ask a question about the website:", height=200)
 
 def get_custom_loader(url):
-    # Use webdriver-manager to download the latest chromedriver dynamically
-    chrome_options = Options()
-    chrome_options.add_argument("--headless")  # Run headless
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-
-    # Use WebDriver Manager to automatically download the correct chromedriver
-    driver_path = ChromeDriverManager().install()
-
-    # Service is initialized with the downloaded chromedriver
-    service = Service(driver_path)
-    driver = webdriver.Chrome(service=service, options=chrome_options)
+    # Use SeleniumBase Driver which handles Chrome installation automatically
+    driver = Driver(browser="chrome", headless=True, uc=True)
     loader = SeleniumURLLoader(urls=[url])
     loader.driver = driver
     return loader
@@ -68,9 +55,9 @@ if st.button("Submit", type='primary'):
         st.warning("Please enter a question.")
     else:
         with st.spinner("Processing..."):
-
             # Load or build vectorstore
             embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+            
             if os.path.exists(VECTORSTORE_PATH):
                 vectorstore = FAISS.load_local(
                     VECTORSTORE_PATH,
@@ -78,17 +65,21 @@ if st.button("Submit", type='primary'):
                     allow_dangerous_deserialization=True
                 )
             else:
-                loader = get_custom_loader(url)
-                docs = loader.load()
-                loader.driver.quit()
+                try:
+                    loader = get_custom_loader(url)
+                    docs = loader.load()
+                    loader.driver.quit()
 
-                for doc in docs:
-                    doc.metadata["source"] = url
+                    for doc in docs:
+                        doc.metadata["source"] = url
 
-                splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=100)
-                chunks = splitter.split_documents(docs)
-                vectorstore = FAISS.from_documents(chunks, embedding_model)
-                vectorstore.save_local(VECTORSTORE_PATH)
+                    splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=100)
+                    chunks = splitter.split_documents(docs)
+                    vectorstore = FAISS.from_documents(chunks, embedding_model)
+                    vectorstore.save_local(VECTORSTORE_PATH)
+                except Exception as e:
+                    st.error(f"Failed to load website: {str(e)}")
+                    st.stop()
 
             retriever = vectorstore.as_retriever()
 
