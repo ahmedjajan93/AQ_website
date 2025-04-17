@@ -16,7 +16,8 @@ os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
 VECTORSTORE_PATH = "my_vector_db"
 
 # Streamlit UI
-st.title("🌐 Website QA & Contact Info Extractor (WebBaseLoader Edition)")
+st.set_page_config(page_title="Website QA", page_icon=":guardsman:", layout="wide")
+st.title("🌐 Website QA")
 url = st.text_input("Enter website URL:", placeholder="https://example.com")
 query = st.text_area("Ask a question about the website:", height=200)
 
